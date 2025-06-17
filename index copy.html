@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Anubhav Chat App</title>
+  <!-- Load Socket.IO from CDN instead of server -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-mZLF4UVrpi/QTWPA7BjNPEnkIfRFn4ZEO3Qt/HFklTJBj/gBOV8G3HcKn4NfQblz" crossorigin="anonymous"></script>
+  <script defer src="script.js"></script>
+  <style>
+    :root {
+      --primary-color: #4a89dc;
+      --secondary-color: #f5f7fa;
+      --accent-color: #5d9cec;
+      --text-color: #333;
+      --light-grey: #eaeaea;
+      --success-color: #a0d468;
+      --error-color: #e9573f;
+      --warning-color: #f6bb42;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background-color: var(--secondary-color);
+      color: var(--text-color);
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      max-width: 100%;
+      width: 100%;
+      padding: 1rem;
+      flex-grow: 1;
+    }
+    
+    .chat-header {
+      text-align: center;
+      padding: 1rem;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    #message-container {
+      flex-grow: 1;
+      overflow-y: auto;
+      margin-bottom: 70px;
+      padding: 1rem;
+      border-radius: 8px;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-height: calc(100vh - 200px);
+    }
+
+    .message {
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      border-radius: 18px;
+      max-width: 80%;
+      word-wrap: break-word;
+      position: relative;
+      animation: fadeIn 0.3s ease-in-out;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .system-message {
+      background-color: var(--light-grey);
+      color: #666;
+      text-align: center;
+      padding: 5px 10px;
+      margin: 5px auto;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      width: fit-content;
+    }
+
+    .user-message {
+      background-color: var(--accent-color);
+      color: white;
+      margin-left: auto;
+      border-radius: 18px 18px 0 18px;
+    }
+
+    .other-message {
+      background-color: white;
+      border: 1px solid var(--light-grey);
+      margin-right: auto;
+      border-radius: 18px 18px 18px 0;
+    }
+
+    #send-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1rem;
+      background-color: white;
+      display: flex;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    #message-input {
+      flex-grow: 1;
+      padding: 12px;
+      border: 1px solid var(--light-grey);
+      border-radius: 24px;
+      margin-right: 10px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    #message-input:focus {
+      border-color: var(--primary-color);
+    }
+
+    #send-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0 20px;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+
+    #send-button:hover {
+      background-color: var(--accent-color);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .user-typing {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 5px;
+      font-style: italic;
+    }
+
+    .connection-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      background-color: var(--warning-color);
+      color: white;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+    }
+
+    .spinner {
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 5px solid var(--primary-color);
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .server-switch {
+      margin-top: 10px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    @media (min-width: 768px) {
+      .chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <h2>Connecting to Chat Server...</h2>
+    <p id="connection-message">Trying to connect...</p>
+    <button class="server-switch" id="switch-server">Switch to Remote Server</button>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>Anubhav Chat</h1>
+    </div>
+    <div id="message-container"></div>
+    <div class="user-typing" id="typing-indicator"></div>
+  </div>
+  <form id="send-container">
+    <input type="text" id="message-input" placeholder="Type a message...">
+    <button type="submit" id="send-button">Send</button>
+  </form>
+  <div class="connection-status" id="connection-status">Connecting...</div>
+</body>
+</html>
